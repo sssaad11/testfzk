@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>متحف الفيزياء التعليمي</title>
+<style>
+:root{--bg:#f4f2ec;--card:#fff;--tx:#1d1d1b;--mu:#6b6a64;--ac:#1d6fd8;--ac2:#d8531d;--bd:#dedcd4;--ok:#1f9d55;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16161a;--card:#222227;--tx:#ececea;--mu:#9a9992;--ac:#5aa2ff;--ac2:#ff8a5a;--bd:#38383e;--ok:#4cd98a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,"Segoe UI",Tahoma,Arial,sans-serif;line-height:1.7}
+.wrap{max-width:900px;margin:0 auto;padding:12px;position:relative}
+.top{display:flex;justify-content:space-between;align-items:center}
+h1{font-size:1.25rem;margin:.2rem 0 .6rem}
+canvas{width:100%;display:block;border-radius:10px;border:1px solid var(--bd)}
+.say{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:8px 12px;margin-bottom:8px;font-size:.95rem;min-height:46px}
+button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--tx);cursor:pointer;touch-action:manipulation}
+button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
+.pad{display:flex;justify-content:space-between;align-items:center;margin-top:8px;direction:ltr}
+.dp{display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(2,48px);gap:4px}
+.dp button{padding:0;font-size:1.2rem}
+#ov{display:none;position:absolute;inset:0;background:var(--bg);padding:12px;z-index:5}
+#ov.on{display:block}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-top:10px}
+.card h3{margin:0 0 6px;font-size:1rem;color:var(--ac)}
+.eq{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:5px 0;border-bottom:1px dashed var(--bd)}
+.eq:last-child{border:0}
+.eq span{direction:ltr;font-family:Georgia,"Times New Roman",serif;font-size:1.08rem;white-space:nowrap}
+.eq small{color:var(--mu);text-align:left;font-size:.8rem}
+label{display:flex;justify-content:space-between;font-size:.88rem;color:var(--mu);margin-top:8px}
+label b{color:var(--tx);direction:ltr}
+input[type=range]{width:100%;accent-color:var(--ac)}
+#ro{font-size:.88rem;color:var(--mu);display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:8px}
+#ro b{color:var(--tx);direction:ltr;display:inline-block}
+.st{padding:6px 0;border-bottom:1px dashed var(--bd);font-size:.92rem}
+.st:last-child{border:0}
+.st .ex{display:block;direction:ltr;text-align:left;font-family:Georgia,serif;color:var(--tx);overflow-x:auto;padding:2px 0}
+.st .ex.r{color:var(--ok);font-weight:bold}
+.row{display:flex;gap:8px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="top"><h1>🏛️ متحف الفيزياء التعليمي</h1><span id="pg" style="font-size:.9rem;color:var(--mu)"></span></div>
+<div class="say" id="say"></div>
+<canvas id="m" width="800" height="500"></canvas>
+<div class="pad">
+ <div class="dp">
+  <span></span><button data-k="ArrowUp">▲</button><span></span>
+  <button data-k="ArrowLeft">◀</button><button data-k="ArrowDown">▼</button><button data-k="ArrowRight">▶</button>
+ </div>
+ <button class="p" id="act" style="height:56px;min-width:110px">تفاعل (E)</button>
+</div>
+
+<div id="ov">
+ <div class="top"><h1 id="ot" style="margin:0"></h1><button id="cl">خروج ✕</button></div>
+ <p id="od" style="color:var(--mu);margin:.3rem 0"></p>
+ <div class="card"><h3>📐 المعادلات</h3><div id="eqs"></div></div>
+ <canvas id="sc" width="640" height="300" style="margin-top:10px"></canvas>
+ <div class="card"><h3>🎛️ المحاكي</h3><div id="cs"></div><div id="ro"></div>
+  <div class="row"><button class="p" id="b1" style="display:none"></button><button id="b2">إعادة ضبط</button></div></div>
+ <div class="card"><h3>✍️ الحل خطوة بخطوة (يتغير مع قيمك)</h3><div id="so"></div></div>
+</div>
+</div>
+<script>
+const $=i=>document.getElementById(i),css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const cv=$('m'),X=cv.getContext('2d'),sc=$('sc'),S=sc.getContext('2d');
+const f=(x,d=2)=>(+x).toFixed(d),G=6.674e-11,g0=9.8,PI=Math.PI;
+const sci=x=>{if(!x)return'0';const e=Math.floor(Math.log10(Math.abs(x)));return (x/10**e).toFixed(2)+'×10<sup>'+e+'</sup>'};
+const rooms=[
+{x:20,y:20,w:360,h:190,c:'#14213d',tc:'#fff',n:'حركة الكواكب',s:0},
+{x:420,y:20,w:360,h:190,c:'#d3e9ff',tc:'#223',n:'قانون الجذب الكوني',s:1},
+{x:20,y:290,w:360,h:190,c:'#dcf3d0',tc:'#223',n:'ديناميكا الحركة الدورانية',s:2},
+{x:420,y:290,w:360,h:190,c:'#f4e1c4',tc:'#223',n:'الاتزان',s:3}];
+rooms.forEach(r=>{r.px=r.x+r.w/2;r.py=r.y+r.h/2+14});
+const stars=Array.from({length:50},()=>[Math.random()*360,Math.random()*190,Math.random()*1.6+.4]);
+const pl={x:400,y:250,f:1,t:0},keys={},seen=new Set();let near=null,open=null,v={},ins=[],last=performance.now(),lastUI=0,T0=0;
+
+function graph(h,x0,y0,w,hh,col){S.strokeStyle=css('--bd');S.lineWidth=1;S.strokeRect(x0,y0,w,hh);S.beginPath();S.moveTo(x0,y0+hh/2);S.lineTo(x0+w,y0+hh/2);S.stroke();
+ if(h.length<2)return;const m=Math.max(.001,...h.map(p=>Math.abs(p[1]))),t0=h[0][0],t1=h[h.length-1][0];
+ S.beginPath();S.strokeStyle=col;S.lineWidth=2;h.forEach((p,i)=>{const px=x0+(p[0]-t0)/Math.max(t1-t0,1e-6)*w,py=y0+hh/2-p[1]/m*(hh/2-4);i?S.lineTo(px,py):S.moveTo(px,py)});S.stroke()}
+const push=(s,t,val)=>{s.hs.push([t,val]);if(s.hs.length>300)s.hs.shift()};
+function kep(v,t){const T=Math.sqrt(v.a**3/v.M),Mn=2*PI*t/T;let E=Mn;for(let i=0;i<8;i++)E-=(E-v.e*Math.sin(E)-Mn)/(1-v.e*Math.cos(E));const b=v.a*Math.sqrt(1-v.e*v.e);return{T,x:v.a*(Math.cos(E)-v.e),y:b*Math.sin(E),r:v.a*(1-v.e*Math.cos(E)),b}}
+const vv=(M,r,a)=>2*PI*Math.sqrt(M*(2/r-1/a));
+const st=(a,b,c)=>[a,b,c];
+
+const sims=[
+{n:'حركة الكواكب (قوانين كبلر)',d:'يدور الكوكب حول النجم في مدار إهليلجي والنجم في إحدى البؤرتين. غيّر نصف المحور الأكبر والاختلاف المركزي وكتلة النجم، ولاحظ المساحة المظللة: تُكنس مساحات متساوية في أزمنة متساوية.',
+ eq:[['T² = a³ / M','كبلر 3: T بالسنة، a بوحدة AU، M بكتلة الشمس'],['r<sub>p</sub> = a(1 − e) ، r<sub>a</sub> = a(1 + e)','أقرب وأبعد مسافة عن النجم'],['v = 2π √( M (2/r − 1/a) )','السرعة المدارية (AU/yr)'],['A₁/t₁ = A₂/t₂','كبلر 2: المساحات المتساوية']],
+ c:[['a','نصف المحور الأكبر a (AU)',.4,5,.1,1.5,1],['e','الاختلاف المركزي e',0,.9,.01,.5,1],['M','كتلة النجم M (كتلة شمسية)',.5,3,.1,1,1],['sp','سرعة العرض',.5,4,.1,1]],
+ init(){this.t=0;this.tr=[];this.p=kep({a:1.5,e:.5,M:1},0)},
+ step(dt,v){this.t+=dt*.25*v.sp;const p=this.p=kep(v,this.t);this.tr.push([this.t,p.x,p.y]);while(this.tr.length&&this.t-this.tr[0][0]>p.T/8)this.tr.shift()},
+ draw(v,w,h){const p=this.p,k=Math.min(w*.44/v.a,h*.44/p.b),cx=w/2,cy=h/2,sx=cx+v.a*v.e*k,sy=cy;
+ S.strokeStyle=css('--bd');S.setLineDash([5,5]);S.beginPath();S.ellipse(cx,cy,v.a*k,p.b*k,0,0,7);S.stroke();S.setLineDash([]);
+ S.fillStyle=css('--ac')+'55';S.beginPath();S.moveTo(sx,sy);this.tr.forEach(q=>S.lineTo(sx+q[1]*k,sy-q[2]*k));S.closePath();S.fill();
+ S.fillStyle='#f5b301';S.beginPath();S.arc(sx,sy,10+3*v.M,0,7);S.fill();
+ S.fillStyle=css('--ac2');S.beginPath();S.arc(sx+p.x*k,sy-p.y*k,7,0,7);S.fill();
+ S.strokeStyle=css('--mu');S.lineWidth=1;S.beginPath();S.moveTo(sx,sy);S.lineTo(sx+p.x*k,sy-p.y*k);S.stroke()},
+ info(v){const p=this.p,s=vv(v.M,p.r,v.a);return[['الدور T',f(p.T)+' yr'],['المسافة الحالية r',f(p.r)+' AU'],['السرعة v',f(s)+' AU/yr'],['السرعة v',f(s*4.74,1)+' km/s']]},
+ solve(v){const p=this.p,T=p.T,rp=v.a*(1-v.e),ra=v.a*(1+v.e),vp=vv(v.M,rp,v.a),va=vv(v.M,ra,v.a);
+ return[st('قانون كبلر الثالث: نحسب الدور','T² = a³/M = '+f(v.a,1)+'³ / '+f(v.M,1)+' = '+f(v.a**3/v.M,3)),
+ st('الدور المداري','T = √'+f(v.a**3/v.M,3)+' = '+f(T)+' سنة','r'),
+ st('أقرب وأبعد مسافة','r<sub>p</sub> = '+f(v.a,1)+'(1 − '+f(v.e)+') = '+f(rp,3)+' AU ،  r<sub>a</sub> = '+f(v.a,1)+'(1 + '+f(v.e)+') = '+f(ra,3)+' AU'),
+ st('السرعة عند الحضيض والأوج','v<sub>p</sub> = '+f(vp)+' AU/yr ،  v<sub>a</sub> = '+f(va)+' AU/yr'),
+ st('تحقق من كبلر 2 (ثبوت الزخم الزاوي): r·v ثابت','r<sub>p</sub>v<sub>p</sub> = '+f(rp*vp,3)+' ، r<sub>a</sub>v<sub>a</sub> = '+f(ra*va,3),'r')]}},
+
+{n:'قانون الجذب الكوني',d:'كل جسمين يتجاذبان بقوة تتناسب طردياً مع حاصل ضرب كتلتيهما وعكسياً مع مربع المسافة بين مركزيهما. اضغط «الأرض والقمر» لتحميل مثال جاهز.',
+ eq:[['F = G m₁ m₂ / r²','قانون الجذب الكوني، G = 6.674×10⁻¹¹'],['g = G m₁ / r²','شدة مجال الجاذبية عند المسافة r'],['a = F / m','تسارع كل جسم نتيجة القوة'],['F′ = F / n²','عند تضاعف المسافة n مرة']],
+ c:[['m1','الكتلة m₁ (×10²⁴ kg)',.1,10,.01,5.97],['m2','الكتلة m₂ (×10²² kg)',1,100,.01,7.35],['r','المسافة r (×10⁸ m)',.5,10,.01,3.84]],btn:'الأرض والقمر',
+ act(v){v.m1=5.97;v.m2=7.35;v.r=3.84},init(){},step(){},
+ draw(v,w,h){const F=G*v.m1*1e24*v.m2*1e22/(v.r*1e8)**2,y=100,x1=40,x2=x1+40+v.r/10*(w*.5-130),r1=10+7*Math.cbrt(v.m1),r2=8+5*Math.cbrt(v.m2),L=Math.max(15,Math.min(80,(Math.log10(F)-8)*9));
+ S.strokeStyle=css('--bd');S.setLineDash([4,4]);S.beginPath();S.moveTo(x1,y+50);S.lineTo(x2,y+50);S.stroke();S.setLineDash([]);S.fillStyle=css('--mu');S.font='12px sans-serif';S.textAlign='center';S.fillText('r',(x1+x2)/2,y+66);
+ S.fillStyle=css('--ac');S.beginPath();S.arc(x1,y,r1,0,7);S.fill();S.fillStyle=css('--ac2');S.beginPath();S.arc(x2,y,r2,0,7);S.fill();
+ S.strokeStyle=css('--tx');S.lineWidth=3;const ar=(x,d)=>{S.beginPath();S.moveTo(x,y);S.lineTo(x+d*L,y);S.stroke();S.beginPath();S.moveTo(x+d*L,y);S.lineTo(x+d*(L-9),y-5);S.lineTo(x+d*(L-9),y+5);S.closePath();S.fillStyle=css('--tx');S.fill()};ar(x1+r1,1);ar(x2-r2,-1);
+ S.fillStyle=css('--tx');S.fillText('m₁',x1,y-r1-8);S.fillText('m₂',x2,y-r2-8);S.fillText('F = '+F.toExponential(2)+' N',(x1+x2)/2,y-40);
+ const gx=w*.55,gy=30,gw=w*.42,gh=230;S.strokeStyle=css('--bd');S.strokeRect(gx,gy,gw,gh);S.beginPath();S.strokeStyle=css('--ac');S.lineWidth=2;
+ for(let i=0;i<=60;i++){const r=.5+9.5*i/60,px=gx+(r-.5)/9.5*gw,py=gy+gh-(.25/(r*r))*gh;i?S.lineTo(px,py):S.moveTo(px,py)}S.stroke();
+ const cx=gx+(v.r-.5)/9.5*gw,cy=gy+gh-(.25/(v.r*v.r))*gh;S.fillStyle=css('--ac2');S.beginPath();S.arc(cx,cy,6,0,7);S.fill();S.fillStyle=css('--mu');S.fillText('F مقابل r (علاقة عكسية تربيعية)',gx+gw/2,gy+gh+16)},
+ info(v){const F=G*v.m1*1e24*v.m2*1e22/(v.r*1e8)**2;return[['F',F.toExponential(3)+' N'],['g عند m₂',f(G*v.m1*1e24/(v.r*1e8)**2,5)+' m/s²'],['F عند 2r',(F/4).toExponential(2)+' N'],['F عند 3r',(F/9).toExponential(2)+' N']]},
+ solve(v){const m1=v.m1*1e24,m2=v.m2*1e22,r=v.r*1e8,F=G*m1*m2/r**2;
+ return[st('نكتب القانون ونعوّض (G = 6.674×10⁻¹¹)','F = G m₁ m₂ / r² = (6.674×10⁻¹¹)(' +sci(m1)+')('+sci(m2)+') / ('+sci(r)+')²'),
+ st('نحسب القوة','F = '+sci(F)+' N','r'),
+ st('شدة مجال m₁ عند موقع m₂','g = G m₁ / r² = '+sci(G*m1/r**2)+' m/s²'),
+ st('تسارع كل جسم (a = F/m)','a₂ = '+sci(F/m2)+' m/s² ،  a₁ = '+sci(F/m1)+' m/s²'),
+ st('لو تضاعفت المسافة (r → 2r)','F′ = F/4 = '+sci(F/4)+' N ، وعند 3r : F/9 = '+sci(F/9)+' N')]}},
+
+{n:'ديناميكا الحركة الدورانية',d:'قوة مماسية على بعد d من محور دوران قرص تولّد عزماً τ = F·d، فيكتسب القرص تسارعاً زاوياً α = τ/I. ابدأ التجربة وشاهد ω وθ تتغيران مع الزمن.',
+ eq:[['τ = F · d','العزم = القوة × ذراع القوة'],['I = ½ m r²','عزم القصور لقرص مصمت'],['Στ = I α','القانون الثاني للدوران'],['ω = α t ، θ = ½ α t²','حركة بتسارع زاوي ثابت'],['K = ½ I ω² ، L = I ω','طاقة الحركة الدورانية والزخم الزاوي']],
+ c:[['F','القوة F (N)',1,50,.5,20,1],['d','ذراع القوة d (m)',.1,1.5,.05,.5,1],['m','الكتلة m (kg)',.5,10,.1,4,1],['r','نصف القطر r (m)',.3,1.5,.05,.8,1],['tf','عزم الاحتكاك τf (N·m)',0,20,.5,2,1]],
+ init(){this.th=0;this.w=0;this.t=0;this.hs=[]},
+ step(dt,v){const I=.5*v.m*v.r*v.r,net=Math.max(v.F*Math.min(v.d,v.r)-v.tf,0);this.a=net/I;this.w+=this.a*dt;this.th+=this.w*dt;this.t+=dt;push(this,this.t,this.w)},
+ draw(v,w,h){const cx=w*.27,cy=h/2,R=35+v.r*60,d=Math.min(v.d,v.r);S.save();S.translate(cx,cy);S.save();S.rotate(this.th);S.beginPath();S.arc(0,0,R,0,7);S.fillStyle=css('--ac')+'44';S.fill();S.strokeStyle=css('--ac');S.lineWidth=3;S.stroke();
+ S.strokeStyle=css('--tx');S.lineWidth=2;for(let i=0;i<4;i++){S.rotate(PI/2);S.beginPath();S.moveTo(0,0);S.lineTo(R,0);S.stroke()}S.beginPath();S.arc(R*.8,0,7,0,7);S.fillStyle=css('--ac2');S.fill();S.restore();
+ const dy=-d/v.r*R;S.strokeStyle=css('--ac2');S.lineWidth=4;S.beginPath();S.moveTo(0,dy);S.lineTo(Math.min(30+v.F*2,100),dy);S.stroke();S.fillStyle=css('--ac2');S.beginPath();S.moveTo(Math.min(30+v.F*2,100)+10,dy);S.lineTo(Math.min(30+v.F*2,100),dy-6);S.lineTo(Math.min(30+v.F*2,100),dy+6);S.fill();
+ S.strokeStyle=css('--mu');S.setLineDash([3,3]);S.lineWidth=1;S.beginPath();S.moveTo(0,0);S.lineTo(0,dy);S.stroke();S.setLineDash([]);S.fillStyle=css('--mu');S.font='12px sans-serif';S.fillText('d',-12,dy/2);S.fillText('F',Math.min(30+v.F*2,100)/2,dy-8);S.restore();
+ graph(this.hs,w*.55,40,w*.43,200,css('--ac2'));S.fillStyle=css('--mu');S.font='12px sans-serif';S.textAlign='center';S.fillText('ω مقابل t',w*.76,256)},
+ info(v){const I=.5*v.m*v.r*v.r;return[['α',f(this.a||0)+' rad/s²'],['ω',f(this.w)+' rad/s'],['θ',f(this.th)+' rad'],['الزمن t',f(this.t)+' s']]},
+ solve(v){const d=Math.min(v.d,v.r),tau=v.F*d,I=.5*v.m*v.r*v.r,net=tau-v.tf,a=Math.max(net,0)/I,t=this.t,w=a*t,th=.5*a*t*t;
+ if(net<=0)return[st('العزم المؤثر','τ = F·d = '+f(v.F,1)+' × '+f(d)+' = '+f(tau)+' N·m'),st('الاحتكاك أكبر من أو يساوي العزم','τ − τf = '+f(net)+' N·m ≤ 0 ← لا يدور القرص','r')];
+ return[st('العزم','τ = F·d = '+f(v.F,1)+' × '+f(d)+' = '+f(tau)+' N·m'),
+ st('عزم القصور للقرص','I = ½ m r² = ½ × '+f(v.m,1)+' × '+f(v.r)+'² = '+f(I,3)+' kg·m²'),
+ st('التسارع الزاوي','α = (τ − τf)/I = ('+f(tau)+' − '+f(v.tf,1)+') / '+f(I,3)+' = '+f(a)+' rad/s²','r'),
+ st('بعد زمن t = '+f(t)+' s','ω = αt = '+f(w)+' rad/s ،  θ = ½αt² = '+f(th)+' rad = '+f(th/(2*PI))+' دورة'),
+ st('الطاقة والزخم الزاوي','K = ½Iω² = '+f(.5*I*w*w)+' J ،  L = Iω = '+f(I*w)+' kg·m²/s')]}},
+
+{n:'الاتزان',d:'يكون الجسم في اتزان سكوني عندما ΣF = 0 و Στ = 0 معاً. ارفع الكتل وحرّك مواضعها حتى تتوازن العارضة، أو اضغط «اتزان تلقائي» لترى الحل.',
+ eq:[['ΣF = 0','محصلة القوى تساوي صفراً'],['Στ = 0','مجموع العزوم حول أي نقطة يساوي صفراً'],['m₁ g d₁ = m₂ g d₂','شرط اتزان العارضة حول نقطة الارتكاز'],['N = (m₁ + m₂) g','قوة رد فعل نقطة الارتكاز']],
+ c:[['m1','الكتلة m₁ (kg)',1,20,.5,4],['d1','بعد m₁ عن الارتكاز d₁ (m)',.5,4,.1,3],['m2','الكتلة m₂ (kg)',1,20,.5,6],['d2','بعد m₂ عن الارتكاز d₂ (m)',.2,4,.01,3]],btn:'اتزان تلقائي',
+ act(v){v.d2=Math.min(4,Math.max(.2,+f(v.m1*v.d1/v.m2)))},init(){this.th=0;this.w=0;this.tn=0},
+ step(dt,v){const tn=this.tn=g0*(v.m2*v.d2-v.m1*v.d1),I=v.m1*v.d1**2+v.m2*v.d2**2+2;
+ if(Math.abs(tn)<.05){this.w*=.9;this.th*=.95;return}this.w+=(tn/I-1.2*this.w)*dt;this.th+=this.w*dt;if(Math.abs(this.th)>.3){this.th=Math.sign(this.th)*.3;this.w=0}},
+ draw(v,w,h){const px=w/2,py=185,k=68,ok=Math.abs(this.tn)<.05;S.textAlign='center';S.fillStyle=css('--mu');S.beginPath();S.moveTo(px,py);S.lineTo(px-26,py+55);S.lineTo(px+26,py+55);S.fill();S.strokeStyle=css('--tx');S.lineWidth=2;S.beginPath();S.moveTo(10,py+55);S.lineTo(w-10,py+55);S.stroke();
+ S.save();S.translate(px,py);S.rotate(this.th);S.fillStyle=css('--tx');S.fillRect(-4*k,-8,8*k,8);
+ const bx=(d,m,c,t)=>{const s=22+m*1.6;S.fillStyle=c;S.fillRect(d-s/2,-8-s,s,s);S.fillStyle='#fff';S.font='bold 12px sans-serif';S.fillText(t+' '+m+'kg',d,-8-s/2+4);S.strokeStyle=css('--tx');S.lineWidth=1.5;S.beginPath();S.moveTo(d,-8-s-2);S.lineTo(d,-8-s-2);S.stroke()};
+ bx(-v.d1*k,v.m1,css('--ac'),'m₁');bx(v.d2*k,v.m2,css('--ac2'),'m₂');S.fillStyle=css('--mu');S.font='11px sans-serif';S.fillText('d₁',-v.d1*k/2,14);S.fillText('d₂',v.d2*k/2,14);S.restore();
+ S.fillStyle=ok?css('--ok'):css('--ac2');S.font='bold 18px sans-serif';S.fillText(ok?'✓ العارضة متزنة':'✗ غير متزنة — تميل '+(this.tn>0?'يميناً':'يساراً'),w/2,30)},
+ info(v){return[['عزم m₁',f(g0*v.m1*v.d1,1)+' N·m'],['عزم m₂',f(g0*v.m2*v.d2,1)+' N·m'],['Στ',f(this.tn,1)+' N·m'],['N',f((v.m1+v.m2)*g0,1)+' N']]},
+ solve(v){const t1=g0*v.m1*v.d1,t2=g0*v.m2*v.d2,df=t2-t1,need=v.m1*v.d1/v.m2,ok=Math.abs(df)<.05;
+ return[st('عزم m₁ حول نقطة الارتكاز (عكس عقارب الساعة)','τ₁ = m₁ g d₁ = '+f(v.m1,1)+' × 9.8 × '+f(v.d1,1)+' = '+f(t1,1)+' N·m'),
+ st('عزم m₂ (مع عقارب الساعة)','τ₂ = m₂ g d₂ = '+f(v.m2,1)+' × 9.8 × '+f(v.d2)+' = '+f(t2,1)+' N·m'),
+ st('مجموع العزوم','Στ = τ₂ − τ₁ = '+f(df,1)+' N·m ← '+(ok?'متزنة ✓':(df>0?'تميل جهة m₂':'تميل جهة m₁')),ok?'r':''),
+ st('الشرط الأول ΣF = 0','N − (m₁+m₂)g = 0 ⇒ N = ('+f(v.m1,1)+' + '+f(v.m2,1)+') × 9.8 = '+f((v.m1+v.m2)*g0,1)+' N'),
+ st('البعد المطلوب للاتزان','d₂ = m₁ d₁ / m₂ = ('+f(v.m1,1)+' × '+f(v.d1,1)+') / '+f(v.m2,1)+' = '+f(need)+' m'+(need>4?' (أكبر من نصف العارضة، غير ممكن)':''),'r')]}}];
+
+let sim=null;
+function enter(i){open=sim=sims[i];seen.add(i);$('ot').textContent=sim.n;$('od').textContent=sim.d;
+ $('eqs').innerHTML=sim.eq.map(e=>'<div class="eq"><span>'+e[0]+'</span><small>'+e[1]+'</small></div>').join('');
+ v={};ins=[];const cs=$('cs');cs.innerHTML='';
+ sim.c.forEach(c=>{v[c[0]]=c[5];const l=document.createElement('label');l.innerHTML=c[1]+' <b>'+c[5]+'</b>';const inp=document.createElement('input');inp.type='range';inp.min=c[2];inp.max=c[3];inp.step=c[4];inp.value=c[5];
+ inp.oninput=()=>{v[c[0]]=+inp.value;l.querySelector('b').textContent=inp.value;if(c[6])sim.init(v)};cs.append(l,inp);ins.push([c,inp,l])});
+ $('b1').style.display=sim.btn?'':'none';$('b1').textContent=sim.btn||'';sim.init(v);lastUI=0;$('ov').classList.add('on');window.scrollTo(0,0)}
+const sync=()=>ins.forEach(([c,inp,l])=>{inp.value=v[c[0]];l.querySelector('b').textContent=v[c[0]]});
+$('b1').onclick=()=>{sim.act(v);sync();sim.init(v)};$('b2').onclick=()=>sim.init(v);
+$('cl').onclick=()=>{open=null;$('ov').classList.remove('on')};
+const doAct=()=>{if(!open&&near)enter(near.s)};$('act').onclick=doAct;
+addEventListener('keydown',e=>{if(e.key==='e'||e.key==='E')doAct();keys[e.key]=1;if(e.key.startsWith('Arrow')&&!open)e.preventDefault()});addEventListener('keyup',e=>keys[e.key]=0);
+document.querySelectorAll('[data-k]').forEach(b=>{const k=b.dataset.k;b.onpointerdown=()=>keys[k]=1;['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>keys[k]=0))});
+
+function person(){const{x,y,f}=pl,b=Math.sin(pl.t*10)*(pl.mv?2:0);X.save();X.translate(x,y);X.scale(f,1);
+ X.fillStyle='rgba(0,0,0,.2)';X.beginPath();X.ellipse(0,18,14,5,0,0,7);X.fill();
+ X.fillStyle='#2b3a55';X.fillRect(-7,6+b/2,6,12);X.fillRect(1,6-b/2,6,12);
+ X.fillStyle='#fff';X.strokeStyle='#999';X.lineWidth=1;X.beginPath();X.roundRect(-11,-16+b/3,22,26,5);X.fill();X.stroke();
+ X.fillStyle='#e8b48a';X.beginPath();X.arc(0,-24+b/3,10,0,7);X.fill();X.fillStyle='#3b2a1d';X.beginPath();X.arc(0,-27+b/3,10,PI,0);X.fill();
+ X.strokeStyle='#222';X.lineWidth=1.5;X.strokeRect(1,-26+b/3,6,5);X.restore()}
+function icon(i,x,y,t){X.save();X.translate(x,y-22+Math.sin(t*2+i)*3);X.lineWidth=2.5;
+ if(i==0){X.fillStyle='#f5b301';X.beginPath();X.arc(0,0,9,0,7);X.fill();X.strokeStyle='#8fb8ff';X.beginPath();X.ellipse(0,0,24,11,0,0,7);X.stroke();X.fillStyle='#8fb8ff';X.beginPath();X.arc(24*Math.cos(t*2),11*Math.sin(t*2),4,0,7);X.fill()}
+ if(i==1){X.fillStyle='#1d6fd8';X.beginPath();X.arc(-16,0,10,0,7);X.fill();X.fillStyle='#d8531d';X.beginPath();X.arc(16,0,6,0,7);X.fill();X.strokeStyle='#223';X.beginPath();X.moveTo(-4,0);X.lineTo(8,0);X.stroke()}
+ if(i==2){X.rotate(t*2);X.strokeStyle='#2d7a2d';X.beginPath();X.arc(0,0,15,0,7);X.stroke();for(let k=0;k<3;k++){X.rotate(PI/3);X.beginPath();X.moveTo(-15,0);X.lineTo(15,0);X.stroke()}}
+ if(i==3){X.strokeStyle='#5b4b3a';X.fillStyle='#5b4b3a';X.beginPath();X.moveTo(0,0);X.lineTo(-9,16);X.lineTo(9,16);X.fill();X.rotate(Math.sin(t*1.5)*.12);X.beginPath();X.moveTo(-24,0);X.lineTo(24,0);X.stroke();X.fillStyle='#1d6fd8';X.fillRect(-24,-9,10,9);X.fillStyle='#d8531d';X.fillRect(14,-9,10,9)}
+ X.restore()}
+function museum(dt,n){
+ const dx=(keys.ArrowRight||keys.d?1:0)-(keys.ArrowLeft||keys.a?1:0),dy=(keys.ArrowDown||keys.s?1:0)-(keys.ArrowUp||keys.w?1:0);pl.mv=dx||dy;
+ if(pl.mv){const l=Math.hypot(dx,dy);pl.x=Math.max(16,Math.min(784,pl.x+dx/l*170*dt));pl.y=Math.max(40,Math.min(480,pl.y+dy/l*170*dt));pl.t+=dt;if(dx)pl.f=dx}
+ X.fillStyle='#e6dfce';X.fillRect(0,0,800,500);X.fillStyle='#efe9da';for(let i=0;i<16;i++)for(let j=0;j<10;j++)if((i+j)%2)X.fillRect(i*50,j*50,50,50);
+ X.fillStyle='#b8a98c';[[395,0],[395,490]].forEach(c=>X.fillRect(c[0],c[1],10,10));
+ near=null;X.textAlign='center';X.direction='rtl';const t=n/1000;
+ rooms.forEach((r,i)=>{X.fillStyle=r.c;X.fillRect(r.x,r.y,r.w,r.h);
+ if(i==0){X.fillStyle='#fff';stars.forEach(s=>{X.globalAlpha=.5+.5*Math.sin(t*2+s[0]);X.fillRect(r.x+s[0],r.y+s[1],s[2],s[2])});X.globalAlpha=1}
+ X.strokeStyle='#5b4b3a';X.lineWidth=5;X.strokeRect(r.x,r.y,r.w,r.h);
+ X.fillStyle=r.tc;X.font='bold 18px sans-serif';X.fillText((seen.has(i)?'✓ ':'')+r.n,r.x+r.w/2,r.y+28);
+ X.fillStyle='#8a7a66';X.beginPath();X.ellipse(r.px,r.py+14,30,10,0,0,7);X.fill();X.fillStyle='#b09a80';X.fillRect(r.px-26,r.py-8,52,22);icon(i,r.px,r.py-10,t);
+ if(Math.hypot(pl.x-r.px,pl.y-r.py)<70){near=r;X.strokeStyle='#d8531d';X.lineWidth=3;X.setLineDash([6,4]);X.beginPath();X.arc(r.px,r.py,52,0,7);X.stroke();X.setLineDash([])}});
+ X.fillStyle='#8a7a66';X.font='14px sans-serif';X.fillText('الردهة الرئيسية',400,255);person();
+ $('pg').textContent='المعروضات المكتملة: '+seen.size+' / 4';
+ $('say').textContent=near?'د. نور: وصلنا إلى «'+near.n+'». اضغط تفاعل لنتعلّم المعادلة ونجرّبها!':seen.size==4?'د. نور: أحسنت! أنهيت جميع المعروضات الأربعة 🎉':'د. نور: أهلاً بك! تجوّل بالأسهم أو WASD واقترب من أحد المعروضات لتتعلم المعادلات وتجرّبها.'}
+function loop(n){const dt=Math.min((n-last)/1000,.05);last=n;
+ if(open){S.clearRect(0,0,640,300);S.textAlign='center';S.direction='rtl';open.step(dt,v);open.draw(v,640,300);
+  if(n-lastUI>150){lastUI=n;$('ro').innerHTML=open.info(v).map(r=>'<span>'+r[0]+': <b>'+r[1]+'</b></span>').join('');
+  $('so').innerHTML=open.solve(v).map((s,i)=>'<div class="st"><b>'+(i+1)+') '+s[0]+'</b><span class="ex'+(s[2]?' r':'')+'">'+s[1]+'</span></div>').join('')}}
+ else museum(dt,n);requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
